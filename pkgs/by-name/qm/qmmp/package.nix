@@ -4,10 +4,8 @@
   fetchurl,
   cmake,
   pkg-config,
-  qtbase,
-  qttools,
-  qtmultimedia,
-  wrapQtAppsHook,
+  qt6,
+  libsForQt5,
   # transports
   curl,
   libmms,
@@ -44,7 +42,7 @@
 }:
 
 # Additional plugins that can be added:
-#  ProjectM visualization plugin
+# ProjectM visualization plugin
 
 # To make MIDI work we must tell Qmmp what instrument configuration to use (and
 # this can unfortunately not be set at configure time):
@@ -57,24 +55,24 @@
 
 stdenv.mkDerivation rec {
   pname = "qmmp";
-  version = "2.1.8";
+  version = "2.2.4";
 
   src = fetchurl {
-    url = "https://qmmp.ylsoftware.com/files/qmmp/2.1/${pname}-${version}.tar.bz2";
-    hash = "sha256-hGphQ8epqym47C9doiSOQd3yc28XwV2UsNc7ivhaae4=";
+    url = "https://qmmp.ylsoftware.com/files/qmmp/2.2/${pname}-${version}.tar.bz2";
+    hash = "sha256-SJ2w3SvtMro8rlq4svgNMel+gb38Xb18gkh8KeMlz4E=";
   };
 
   nativeBuildInputs = [
     cmake
     pkg-config
-    wrapQtAppsHook
+    qt6.wrapQtAppsHook
   ];
 
   buildInputs = [
     # basic requirements
-    qtbase
-    qttools
-    qtmultimedia
+    qt6.qtbase
+    qt6.qttools
+    qt6.qtmultimedia
     # transports
     curl
     libmms
@@ -97,7 +95,9 @@ stdenv.mkDerivation rec {
     game-music-emu
     libarchive
     opusfile
-    soxr
+    (soxr.overrideAttrs (oldAttrs: {
+      outputs = [ "out" ];
+    }))
     wavpack
     libxmp
     libsidplayfp
@@ -110,12 +110,18 @@ stdenv.mkDerivation rec {
     libsamplerate
   ];
 
-  meta = with lib; {
+  postInstall = ''
+    substituteInPlace $out/share/qmmp/scripts/kwin.sh \
+      --replace-fail 'kreadconfig5' '${libsForQt5.kconfig}/bin/kreadconfig5' \
+      --replace-fail 'kwriteconfig5' '${libsForQt5.kconfig}/bin/kwriteconfig5'
+  '';
+
+  meta = {
     description = "Qt-based audio player that looks like Winamp";
-    mainProgram = "qmmp";
     homepage = "https://qmmp.ylsoftware.com/";
-    license = licenses.gpl2Plus;
-    platforms = platforms.linux;
-    maintainers = [ maintainers.bjornfor ];
+    mainProgram = "qmmp";
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [ bjornfor ];
   };
 }
